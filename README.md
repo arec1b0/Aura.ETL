@@ -12,6 +12,7 @@ A lightweight, extensible ETL (Extract, Transform, Load) pipeline framework buil
 - **Configuration-Driven**: JSON-based pipeline configuration
 - **Asynchronous Processing**: Built-in support for async operations and cancellation
 - **Modular Design**: Clean separation between abstractions, core engine, and plugins
+- **Comprehensive Testing**: 60+ unit and integration tests ensuring reliability
 
 ## 🏗️ Architecture
 
@@ -145,6 +146,7 @@ src/
 │   ├── Interfaces/             # Service interfaces
 │   ├── Models/                 # Configuration models
 │   └── Services/               # Implementation services
+├── Aura.Core.Tests/            # Comprehensive test suite (60+ tests)
 └── plugins/                    # Plugin implementations
     ├── Aura.Plugin.Csv/        # CSV data source
     └── Aura.Plugin.Transforms/ # Data transformations and sinks
@@ -156,7 +158,7 @@ src/
 # Build all projects
 dotnet build
 
-# Run tests (if any)
+# Run comprehensive test suite (60+ tests)
 dotnet test
 
 # Create packages
@@ -202,9 +204,9 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ### Development Guidelines
 
 1. Follow the existing code style and architecture patterns
-2. Add unit tests for new functionality
+2. Add comprehensive unit and integration tests for new functionality
 3. Update documentation as needed
-4. Ensure all tests pass before submitting
+4. Ensure all tests pass before submitting (60+ test suite)
 
 ## 📄 License
 
@@ -219,3 +221,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with .NET 8.0
 - Inspired by modern ETL frameworks and plugin architectures
 - Designed for extensibility and maintainability
+- Comprehensive testing with xUnit, FluentAssertions, and Moq
