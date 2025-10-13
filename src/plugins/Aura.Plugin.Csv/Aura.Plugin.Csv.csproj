@@ -10,8 +10,4 @@
     <ProjectReference Include="..\..\Aura.Abstractions\Aura.Abstractions.csproj" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;$(TargetDir)*.dll&quot; &quot;$(SolutionDir)src\Aura.Core\bin\Debug\net8.0\plugins\&quot; /Y /I" />
-  </Target>
-
 </Project>

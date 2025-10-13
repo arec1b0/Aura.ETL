@@ -22,6 +22,11 @@ namespace Aura.Core.Services
 
         public object CreateStep(StepConfiguration stepConfig)
         {
+            if (stepConfig == null)
+            {
+                throw new ArgumentNullException(nameof(stepConfig));
+            }
+
             var typeParts = stepConfig.Type.Split(',');
             if (typeParts.Length != 2)
             {
