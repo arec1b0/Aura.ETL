@@ -2,6 +2,8 @@
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/arec1b0/Aura.ETL/workflows/CI/badge.svg)](https://github.com/arec1b0/Aura.ETL/actions)
+[![CodeQL](https://github.com/arec1b0/Aura.ETL/workflows/CodeQL/badge.svg)](https://github.com/arec1b0/Aura.ETL/actions)
 
 A lightweight, extensible ETL (Extract, Transform, Load) pipeline framework built with C# and .NET 8.0. Aura.ETL provides a clean, type-safe architecture for building data processing pipelines with plugin-based extensibility.
 
@@ -164,6 +166,21 @@ dotnet test
 # Create packages
 dotnet pack
 ```
+
+### CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **Continuous Integration**: Automated builds and tests on push/PR to main branch
+- **Multi-platform Testing**: Tests run on Windows, Linux, and macOS
+- **Code Quality**: CodeQL security analysis and dependency updates via Dependabot
+- **Automated Releases**: Manual workflow for publishing to NuGet
+
+Workflows include:
+
+- `ci.yml`: Main CI pipeline with build, test, and packaging
+- `codeql-analysis.yml`: Security vulnerability scanning
+- `publish.yml`: Manual NuGet package publishing
 
 ### Adding New Plugins
 

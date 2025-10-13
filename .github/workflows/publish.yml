@@ -1,0 +1,56 @@
+name: Publish to NuGet
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Package version to publish"
+                required: true
+                default: "1.0.0"
+
+jobs:
+    publish:
+        name: Publish NuGet Package
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup .NET
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: "8.0.x"
+
+            - name: Restore dependencies
+              run: dotnet restore
+
+            - name: Build solution
+              run: dotnet build --configuration Release --no-restore
+
+            - name: Copy test data and plugins
+              run: |
+                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/TestData
+                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/plugins
+                  cp src/Aura.Core.Tests/TestData/* src/Aura.Core.Tests/bin/Release/net8.0/TestData/
+                  cp src/plugins/Aura.Plugin.Csv/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
+                  cp src/plugins/Aura.Plugin.Transforms/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
+
+            - name: Run tests
+              run: dotnet test --configuration Release --no-restore --verbosity quiet
+
+            - name: Pack NuGet packages
+              run: dotnet pack --configuration Release --no-restore --output ./artifacts /p:PackageVersion=${{ github.event.inputs.version }}
+
+            - name: Push to NuGet
+              run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+            - name: Create GitHub release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: v${{ github.event.inputs.version }}
+                  release_name: Release v${{ github.event.inputs.version }}
+                  draft: false
+                  prerelease: false
