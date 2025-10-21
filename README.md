@@ -9,12 +9,25 @@ A lightweight, extensible ETL (Extract, Transform, Load) pipeline framework buil
 
 ## 🌟 Features
 
-- **Type-Safe Pipeline Steps**: Strongly-typed interfaces ensure compile-time safety
+### Core Capabilities
+- **Type-Safe Pipeline Execution**: Compile-time type checking with no dynamic dispatch
 - **Plugin Architecture**: Extensible through .NET assemblies loaded at runtime
-- **Configuration-Driven**: JSON-based pipeline configuration
+- **Configuration-Driven**: JSON-based pipeline configuration with FluentValidation
 - **Asynchronous Processing**: Built-in support for async operations and cancellation
 - **Modular Design**: Clean separation between abstractions, core engine, and plugins
 - **Comprehensive Testing**: 60+ unit and integration tests ensuring reliability
+
+### Production-Ready Features
+- **Structured Logging**: Serilog integration with correlation IDs and metrics tracking
+- **Streaming Data Processing**: Handle multi-GB CSV files with constant memory usage
+- **Dependency Injection**: Microsoft.Extensions.Hosting for modern .NET architecture
+- **Resilience Policies**: Polly-based retry, circuit breaker, and timeout patterns
+- **Security Hardening**: Path traversal validation and file size limits
+- **Graceful Shutdown**: Proper signal handling for Ctrl+C and SIGTERM
+- **Memory Pooling**: ArrayPool optimizations for high-performance transformations
+- **Cross-Platform CI/CD**: PowerShell-based builds for Windows/Linux/macOS
+- **Configuration Validation**: Pre-execution validation with clear error messages
+- **Observability**: Pipeline metrics with execution time and row counts
 
 ## 🏗️ Architecture
 
@@ -38,6 +51,7 @@ Data Source → Transformer(s) → Data Sink
 
 - .NET 8.0 SDK or later
 - Windows/Linux/macOS
+- 2GB+ RAM recommended for large file processing
 
 ### Installation
 
@@ -54,12 +68,20 @@ cd Aura.ETL
 dotnet build
 ```
 
-3. Run the example pipeline:
+3. Configure logging (optional):
+
+```bash
+# Edit src/Aura.Core/appsettings.json to customize log levels and outputs
+```
+
+4. Run the example pipeline:
 
 ```bash
 cd src/Aura.Core
 dotnet run
 ```
+
+Logs will be written to `logs/aura-{Date}.log` and the console.
 
 ## 📖 Usage
 
@@ -94,13 +116,16 @@ Pipelines are defined using JSON configuration files. Here's an example:
 
 #### Data Sources
 
-- **CsvDataSource**: Reads data from CSV files
-  - Settings: `filePath` (string)
+- **CsvDataSource**: Streams data from CSV files (supports multi-GB files)
+  - Settings: 
+    - `filePath` (string, required): Path to CSV file
+    - `batchSize` (int, optional): Batch size for streaming (default: 1000)
+    - `maxFileSizeBytes` (long, optional): Maximum file size in bytes (default: 10GB)
 
 #### Transformers
 
-- **SelectColumnsTransformer**: Selects specific columns by index
-  - Settings: `columnIndices` (array of integers)
+- **SelectColumnsTransformer**: Selects specific columns by index (uses memory pooling)
+  - Settings: `columnIndices` (array of integers, required)
 
 #### Data Sinks
 

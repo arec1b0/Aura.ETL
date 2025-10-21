@@ -3,6 +3,7 @@
 using Aura.Abstractions; // Added for IConfigurableStep
 using Aura.Core.Interfaces;
 using Aura.Core.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,16 +12,21 @@ using System.Reflection;
 
 namespace Aura.Core.Services
 {
+    /// <summary>
+    /// Factory for creating type-safe pipeline step executors from plugin assemblies.
+    /// </summary>
     public class StepFactory : IStepFactory
     {
         private readonly Dictionary<string, Assembly> _loadedAssemblies = new();
+        private readonly ILogger<StepFactory> _logger;
 
-        public StepFactory()
+        public StepFactory(ILogger<StepFactory> logger)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             LoadPluginAssemblies();
         }
 
-        public object CreateStep(StepConfiguration stepConfig)
+        public IPipelineStepExecutor CreateStep(StepConfiguration stepConfig)
         {
             if (stepConfig == null)
             {
@@ -53,23 +59,82 @@ namespace Aura.Core.Services
                 configurableStep.Initialize(stepConfig.Settings);
             }
 
-            return stepInstance;
+            // Wrap the step in a type-safe executor
+            return WrapStepInExecutor(stepInstance, stepConfig.Type);
+        }
+
+        private IPipelineStepExecutor WrapStepInExecutor(object stepInstance, string stepTypeName)
+        {
+            // Find all IPipelineStep<TIn, TOut> interfaces implemented by the step
+            var pipelineStepInterfaces = stepInstance.GetType()
+                .GetInterfaces()
+                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineStep<,>))
+                .ToList();
+
+            if (pipelineStepInterfaces.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Step type '{stepTypeName}' does not implement IPipelineStep<TIn, TOut>.");
+            }
+
+            if (pipelineStepInterfaces.Count > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Step type '{stepTypeName}' implements multiple IPipelineStep interfaces. " +
+                    $"Only one is supported.");
+            }
+
+            var pipelineStepInterface = pipelineStepInterfaces[0];
+            var genericArgs = pipelineStepInterface.GetGenericArguments();
+            var tIn = genericArgs[0];
+            var tOut = genericArgs[1];
+
+            // Create PipelineStepExecutor<TIn, TOut> using reflection
+            var executorType = typeof(PipelineStepExecutor<,>).MakeGenericType(tIn, tOut);
+            var executor = Activator.CreateInstance(executorType, stepInstance, stepTypeName);
+
+            if (executor is not IPipelineStepExecutor result)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to create executor for step '{stepTypeName}'.");
+            }
+
+            return result;
         }
 
         private void LoadPluginAssemblies()
         {
-            // ... (rest of the method is unchanged)
             var executionPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
             var pluginsPath = Path.Combine(executionPath, "plugins");
 
-            if (!Directory.Exists(pluginsPath)) return;
+            _logger.LogInformation("Loading plugins from: {PluginsPath}", pluginsPath);
+
+            if (!Directory.Exists(pluginsPath))
+            {
+                _logger.LogWarning("Plugins directory not found: {PluginsPath}", pluginsPath);
+                return;
+            }
 
             var pluginAssemblies = Directory.GetFiles(pluginsPath, "*.dll");
+            _logger.LogInformation("Found {AssemblyCount} plugin assemblies", pluginAssemblies.Length);
+
             foreach (var assemblyPath in pluginAssemblies)
             {
-                var assembly = Assembly.LoadFrom(assemblyPath);
-                _loadedAssemblies[assembly.GetName().Name!] = assembly;
-                Console.WriteLine($"Loaded plugin assembly: {assembly.GetName().Name}");
+                try
+                {
+                    var assembly = Assembly.LoadFrom(assemblyPath);
+                    var assemblyName = assembly.GetName().Name!;
+                    _loadedAssemblies[assemblyName] = assembly;
+                    
+                    _logger.LogInformation(
+                        "Loaded plugin assembly: {AssemblyName} (Version: {Version})",
+                        assemblyName,
+                        assembly.GetName().Version);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load plugin assembly: {AssemblyPath}", assemblyPath);
+                }
             }
         }
     }
