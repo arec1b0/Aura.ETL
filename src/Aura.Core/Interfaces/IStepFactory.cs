@@ -1,5 +1,6 @@
 // src/Aura.Core/Interfaces/IStepFactory.cs
 
+using Aura.Abstractions;
 using Aura.Core.Models;
 
 namespace Aura.Core.Interfaces
@@ -12,10 +13,10 @@ namespace Aura.Core.Interfaces
     public interface IStepFactory
     {
         /// <summary>
-        /// Creates an instance of a pipeline step based on its configuration.
+        /// Creates a type-safe executor for the specified step configuration.
         /// </summary>
         /// <param name="stepConfig">The configuration for the step to be created.</param>
-        /// <returns>An instance of the configured pipeline step as a non-generic object.</returns>
-        object CreateStep(StepConfiguration stepConfig);
+        /// <returns>A type-safe pipeline step executor.</returns>
+        IPipelineStepExecutor CreateStep(StepConfiguration stepConfig);
     }
 }
