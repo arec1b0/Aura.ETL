@@ -1,152 +1,163 @@
 name: CI
 
 on:
-    push:
-        branches: [main, master]
-    pull_request:
-        branches: [main, master]
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
 
 jobs:
-    build-and-test:
-        name: Build and Test
-        runs-on: ${{ matrix.os }}
+  build-and-test:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
 
-        strategy:
-            matrix:
-                os: [ubuntu-latest, windows-latest, macos-latest]
-                dotnet-version: ["8.0.x"]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dotnet-version: ["8.0.x"]
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: ${{ matrix.dotnet-version }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
 
-            - name: Restore dependencies
-              run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-            - name: Build solution
-              run: dotnet build --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
 
-            - name: Copy test data and plugins
-              run: |
-                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/TestData
-                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/plugins
-                  cp src/Aura.Core.Tests/TestData/* src/Aura.Core.Tests/bin/Release/net8.0/TestData/
-                  cp src/plugins/Aura.Plugin.Csv/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
-                  cp src/plugins/Aura.Plugin.Transforms/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
+      - name: Copy test data and plugins
+        run: |
+          mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/TestData
+          mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/plugins
+          cp src/Aura.Core.Tests/TestData/* src/Aura.Core.Tests/bin/Release/net8.0/TestData/
+          cp src/plugins/Aura.Plugin.Csv/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
+          cp src/plugins/Aura.Plugin.Transforms/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
 
-            - name: Run tests
-              run: dotnet test --configuration Release --no-restore --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      - name: Run tests
+        run: dotnet test --configuration Release --no-restore --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
-            - name: Upload test results
-              uses: actions/upload-artifact@v4
-              if: failure()
-              with:
-                  name: test-results-${{ matrix.os }}
-                  path: "**/*.trx"
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: "**/*.trx"
 
-            - name: Pack NuGet packages
-              run: dotnet pack --configuration Release --no-restore --output ./artifacts
+      - name: Pack NuGet packages
+        run: dotnet pack --configuration Release --no-restore --output ./artifacts
 
-            - name: Upload packages
-              uses: actions/upload-artifact@v4
-              with:
-                  name: packages-${{ matrix.os }}
-                  path: ./artifacts/*.nupkg
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.os }}
+          path: ./artifacts/*.nupkg
+          retention-days: 30
 
-    code-quality:
-        name: Code Quality Checks
-        runs-on: ubuntu-latest
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: "8.0.x"
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
 
-            - name: Restore dependencies
-              run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-            - name: Build solution
-              run: dotnet build --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
 
-            - name: Copy test data and plugins
-              run: |
-                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/TestData
-                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/plugins
-                  cp src/Aura.Core.Tests/TestData/* src/Aura.Core.Tests/bin/Release/net8.0/TestData/
-                  cp src/plugins/Aura.Plugin.Csv/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
-                  cp src/plugins/Aura.Plugin.Transforms/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
+      - name: Copy test data and plugins (cross-platform)
+        shell: pwsh
+        run: |
+          $testDataDest = "src/Aura.Core.Tests/bin/Release/net8.0/TestData"
+          $pluginsDest = "src/Aura.Core.Tests/bin/Release/net8.0/plugins"
 
-            - name: Run tests with coverage
-              run: dotnet test --configuration Release --no-restore --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage
+          New-Item -ItemType Directory -Force -Path $testDataDest | Out-Null
+          New-Item -ItemType Directory -Force -Path $pluginsDest | Out-Null
 
-            - name: Upload coverage reports
-              uses: actions/upload-artifact@v4
-              with:
-                  name: coverage-report
-                  path: ./coverage/**
+          Copy-Item -Path "src/Aura.Core.Tests/TestData/*" -Destination $testDataDest -Recurse -Force
+          Copy-Item -Path "src/plugins/Aura.Plugin.Csv/bin/Release/net8.0/*.dll" -Destination $pluginsDest -Force
+          Copy-Item -Path "src/plugins/Aura.Plugin.Transforms/bin/Release/net8.0/*.dll" -Destination $pluginsDest -Force
 
-    release:
-        name: Create Release
-        runs-on: ubuntu-latest
-        needs: [build-and-test, code-quality]
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Run tests with coverage
+        run: dotnet test --configuration Release --no-restore --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage/**
+          retention-days: 30
 
-            - name: Setup .NET
-              uses: actions/setup-dotnet@v4
-              with:
-                  dotnet-version: "8.0.x"
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-and-test, code-quality]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-            - name: Restore dependencies
-              run: dotnet restore
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Build solution
-              run: dotnet build --configuration Release --no-restore
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
 
-            - name: Copy test data and plugins
-              run: |
-                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/TestData
-                  mkdir -p src/Aura.Core.Tests/bin/Release/net8.0/plugins
-                  cp src/Aura.Core.Tests/TestData/* src/Aura.Core.Tests/bin/Release/net8.0/TestData/
-                  cp src/plugins/Aura.Plugin.Csv/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
-                  cp src/plugins/Aura.Plugin.Transforms/bin/Release/net8.0/*.dll src/Aura.Core.Tests/bin/Release/net8.0/plugins/
+      - name: Restore dependencies
+        run: dotnet restore
 
-            - name: Run tests
-              run: dotnet test --configuration Release --no-restore --verbosity quiet
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
 
-            - name: Pack NuGet packages
-              run: dotnet pack --configuration Release --no-restore --output ./artifacts
+      - name: Copy test data and plugins (cross-platform)
+        shell: pwsh
+        run: |
+          $testDataDest = "src/Aura.Core.Tests/bin/Release/net8.0/TestData"
+          $pluginsDest = "src/Aura.Core.Tests/bin/Release/net8.0/plugins"
 
-            - name: Create GitHub release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: v${{ github.run_number }}
-                  release_name: Release v${{ github.run_number }}
-                  draft: false
-                  prerelease: false
+          New-Item -ItemType Directory -Force -Path $testDataDest | Out-Null
+          New-Item -ItemType Directory -Force -Path $pluginsDest | Out-Null
 
-            - name: Upload release assets
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./artifacts/Aura.Abstractions.${{ github.run_number }}.0.nupkg
-                  asset_name: Aura.Abstractions.${{ github.run_number }}.0.nupkg
-                  asset_content_type: application/zip
+          Copy-Item -Path "src/Aura.Core.Tests/TestData/*" -Destination $testDataDest -Recurse -Force
+          Copy-Item -Path "src/plugins/Aura.Plugin.Csv/bin/Release/net8.0/*.dll" -Destination $pluginsDest -Force
+          Copy-Item -Path "src/plugins/Aura.Plugin.Transforms/bin/Release/net8.0/*.dll" -Destination $pluginsDest -Force
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-restore --verbosity quiet
+
+      - name: Pack NuGet packages
+        run: dotnet pack --configuration Release --no-restore --output ./artifacts
+
+      - name: Generate version number
+        id: version
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: ./artifacts/*.nupkg
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
