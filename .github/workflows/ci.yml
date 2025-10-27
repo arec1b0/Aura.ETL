@@ -43,7 +43,7 @@ jobs:
         run: dotnet test --configuration Release --no-restore --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: test-results-${{ matrix.os }}
@@ -53,7 +53,7 @@ jobs:
         run: dotnet pack --configuration Release --no-restore --output ./artifacts
 
       - name: Upload packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: packages-${{ matrix.os }}
           path: ./artifacts/*.nupkg
@@ -95,7 +95,7 @@ jobs:
         run: dotnet test --configuration Release --no-restore --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report
           path: ./coverage/**
