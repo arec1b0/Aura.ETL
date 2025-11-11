@@ -94,7 +94,11 @@ public static class Program
         {
             // Ensure Serilog flushes all logs
             Log.CloseAndFlush();
-            
+
+            // Unregister shutdown handlers to prevent ObjectDisposedException
+            Console.CancelKeyPress -= OnCancelKeyPress;
+            AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
+
             // Clean up
             _shutdownTokenSource.Dispose();
         }
